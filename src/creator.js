@@ -4,6 +4,7 @@ import { textColorFor, paletteFromImageUrl } from './color.js';
 import { searchMusic, artistAlbums } from './music.js';
 import { escapeHtml, toast, copyText } from './dom.js';
 import { openShareSheet, qrDataUrl } from './share.js';
+import { SHAPES, getShape, shapeSvg, shapeVars } from './shapes.js';
 
 const DRAFT_KEY = 'fanproject:draft';
 const MAX_PALETTE = 8;
@@ -78,6 +79,19 @@ export function renderCreator(app, initial) {
           </fieldset>
 
           <fieldset>
+            <legend>Hold up shape</legend>
+            <p class="muted small">With a shape, Hold up mode blacks out the screen and shows the shape in the card color with the text on it.</p>
+            <div class="shape-picker" role="radiogroup" aria-label="Hold up shape">
+              ${SHAPES.map(
+                (sh) => `<label class="shape-option">
+                  <input type="radio" name="shape" value="${sh.id}" />
+                  <span>${sh.svg ? shapeSvg(sh, 'shape-icon') : '<i class="full-icon"></i>'}${sh.label}</span>
+                </label>`,
+              ).join('')}
+            </div>
+          </fieldset>
+
+          <fieldset>
             <legend>Album palette <span class="opt">optional</span></legend>
             <p class="muted small">Colors come from the cover of the song or album you pick above. You can also upload the artwork yourself.</p>
             <label class="btn ghost upload">
@@ -112,7 +126,7 @@ export function renderCreator(app, initial) {
         </form>
 
         <aside class="preview-col">
-          <p class="muted small">Preview</p>
+          <p class="muted small preview-label">Preview</p>
           <div class="phone"><div class="phone-card"></div></div>
           <div class="publish-result" hidden>
             <img class="qr" alt="QR code for your card" />
@@ -139,6 +153,7 @@ export function renderCreator(app, initial) {
   field('allowPalette').checked = project.allowPalette;
   field('allowCustom').checked = project.allowCustom;
   field('allowHideText').checked = project.allowHideText;
+  form.querySelector(`input[name="shape"][value="${project.shape}"]`).checked = true;
   form.querySelectorAll('[data-social]').forEach((el) => (el.value = project.socials[el.dataset.social] || ''));
 
   function renderPreview() {
@@ -146,11 +161,20 @@ export function renderCreator(app, initial) {
     card.style.setProperty('--card', project.color);
     card.style.setProperty('--card-text', textColorFor(project.color));
     const swatches = project.allowPalette ? project.palette : [];
-    card.innerHTML = `
+    const shape = getShape(project.shape);
+    const text = `
       ${project.title ? `<p class="eyebrow">${escapeHtml(project.title)}</p>` : ''}
       <p class="instructions">${escapeHtml(project.instructions || 'Hold this up!')}</p>
       ${project.song ? `<p class="song">${escapeHtml(project.song)}</p>` : ''}
-      ${project.artist ? `<p class="artist">${escapeHtml(project.artist)}</p>` : ''}
+      ${project.artist ? `<p class="artist">${escapeHtml(project.artist)}</p>` : ''}`;
+    card.classList.toggle('shape-preview', Boolean(shape));
+    $('.preview-label').textContent = shape ? 'Hold up preview' : 'Preview';
+    if (shape) {
+      card.innerHTML = `<div class="stage" style="${shapeVars(shape)}">${shapeSvg(shape)}<div class="card-content">${text}</div></div>`;
+      return;
+    }
+    card.innerHTML = `
+      ${text}
       <div class="mini-swatches">
         ${[project.color, ...swatches].map((c) => `<span style="--c:${c}"></span>`).join('')}
         ${project.allowCustom ? '<span class="custom">+</span>' : ''}
@@ -219,6 +243,7 @@ export function renderCreator(app, initial) {
       project.color = hex;
       field('color').value = hex;
     } else if (t.type === 'checkbox') project[t.name] = t.checked;
+    else if (t.name === 'shape') project.shape = t.value;
     else if (t.name in project) project[t.name] = t.value;
     else return;
     saveDraft(project);

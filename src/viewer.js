@@ -3,6 +3,7 @@ import { textColorFor } from './color.js';
 import { normalizeHex } from './codec.js';
 import { SOCIALS, socialLink, socialDisplay } from './socials.js';
 import { openShareSheet } from './share.js';
+import { getShape, shapeSvg, shapeVars } from './shapes.js';
 
 function storageKey(encoded) {
   return `fanproject:color:${encoded.slice(0, 64)}`;
@@ -34,14 +35,21 @@ export function renderViewer(app, project, encoded) {
 
   const socials = SOCIALS.filter((s) => project.socials[s.id]);
 
+  const shape = getShape(project.shape);
+
   document.body.classList.add('viewer-mode');
   app.innerHTML = `
-    <main class="viewer">
+    <main class="viewer${shape ? ' has-shape' : ''}">
       <section class="card-face" aria-live="polite">
-        ${project.title ? `<p class="eyebrow">${escapeHtml(project.title)}</p>` : ''}
-        <h1 class="instructions">${escapeHtml(project.instructions || 'Hold this up!')}</h1>
-        ${project.song ? `<p class="song">${escapeHtml(project.song)}</p>` : ''}
-        ${project.artist || project.album ? `<p class="artist">${escapeHtml([project.artist, project.album].filter(Boolean).join(' · '))}</p>` : ''}
+        <div class="stage"${shape ? ` style="${shapeVars(shape)}"` : ''}>
+          ${shape ? shapeSvg(shape) : ''}
+          <div class="card-content">
+            ${project.title ? `<p class="eyebrow">${escapeHtml(project.title)}</p>` : ''}
+            <h1 class="instructions">${escapeHtml(project.instructions || 'Hold this up!')}</h1>
+            ${project.song ? `<p class="song">${escapeHtml(project.song)}</p>` : ''}
+            ${project.artist || project.album ? `<p class="artist">${escapeHtml([project.artist, project.album].filter(Boolean).join(' · '))}</p>` : ''}
+          </div>
+        </div>
         <p class="hold-hint">Tap anywhere to exit · turn your brightness all the way up</p>
       </section>
       ${project.allowHideText ? '<button class="text-toggle" data-act="toggle-text" aria-pressed="false">Hide text</button>' : ''}

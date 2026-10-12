@@ -67,6 +67,12 @@ describe('codec', () => {
     expect(p.palette).toEqual(['#00ff00']);
   });
 
+  it('round-trips the hold up shape and drops unknown shapes', async () => {
+    expect((await decodeProject(await encodeProject({ ...sample, shape: 'star' }))).shape).toBe('star');
+    expect(compact({ ...sample, shape: 'none' }).sh).toBeUndefined();
+    expect((await decodeProject(btoa(JSON.stringify({ v: 1, sh: 'blob' })))).shape).toBe('none');
+  });
+
   it('normalizes hex', () => {
     expect(normalizeHex('ABCDEF')).toBe('#abcdef');
     expect(normalizeHex('#abc')).toBeNull();
