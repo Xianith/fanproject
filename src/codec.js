@@ -1,6 +1,8 @@
 // A project is stored entirely in the share URL so no server is needed.
 // Keys are shortened to keep the QR code small and easy to scan.
 
+import { isShapeId } from './shapes.js';
+
 export const SCHEMA_VERSION = 1;
 
 const KEY_MAP = {
@@ -10,6 +12,7 @@ const KEY_MAP = {
   album: 'al',
   instructions: 'i',
   color: 'c',
+  shape: 'sh',
   palette: 'p',
   allowCustom: 'cc',
   allowPalette: 'pp',
@@ -36,6 +39,7 @@ function blankProject() {
     album: '',
     instructions: '',
     color: '#ff3b8b',
+    shape: 'none',
     palette: [],
     allowCustom: true,
     allowPalette: true,
@@ -61,6 +65,7 @@ export function compact(project) {
   for (const [key, short] of Object.entries(KEY_MAP)) {
     let value = project[key];
     if (key === 'color') value = normalizeHex(value);
+    if (key === 'shape' && (value === 'none' || !isShapeId(value))) continue;
     if (key === 'palette') value = (value || []).map(normalizeHex).filter(Boolean).map((h) => h.slice(1));
     if (key === 'color' && value) value = value.slice(1);
     if (key === 'socials') {
@@ -90,6 +95,7 @@ export function expand(data) {
     const key = REVERSE_KEY_MAP[short];
     if (!key) continue;
     if (key === 'color') project.color = normalizeHex(String(value)) || project.color;
+    else if (key === 'shape') project.shape = isShapeId(value) ? value : 'none';
     else if (key === 'palette') project.palette = Array.isArray(value) ? value.map((h) => normalizeHex(String(h))).filter(Boolean) : [];
     else if (key === 'allowCustom' || key === 'allowPalette' || key === 'allowHideText') project[key] = Boolean(value);
     else if (key === 'socials') project.socials = value && typeof value === 'object' ? { ...value } : {};

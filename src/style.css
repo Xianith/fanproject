@@ -146,6 +146,8 @@ body.viewer-mode { background: #000; }
   flex: 1; min-height: 62dvh; display: flex; flex-direction: column; justify-content: center; align-items: center;
   gap: 12px; padding: max(32px, env(safe-area-inset-top)) 20px 24px; text-align: center;
 }
+.stage, .card-content { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.stage .shape { display: none; }
 .card-face .eyebrow { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.8rem; font-weight: 700; opacity: 0.8; }
 .card-face .instructions { font-size: clamp(2rem, 9vw, 4.5rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; max-width: 18ch; overflow-wrap: anywhere; }
 .card-face .song { font-size: clamp(1.6rem, 7vw, 3rem); font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
@@ -184,7 +186,7 @@ body.viewer-mode { background: #000; }
   opacity: 0.55; cursor: pointer;
 }
 .viewer.holding .text-toggle { display: block; }
-.viewer.text-hidden .card-face > * { visibility: hidden; }
+.viewer.text-hidden .card-content, .viewer.text-hidden .hold-hint { visibility: hidden; }
 
 /* Share sheet */
 .sheet-overlay {
@@ -212,3 +214,44 @@ body.viewer-mode { background: #000; }
 .error-page { max-width: 480px; margin: 20vh auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Hold up with a shape: black screen, the shape in the card color, text on the shape.
+   Text sizes use container units so they scale with the shape. */
+.viewer.holding.has-shape { background: #000; }
+.viewer.holding.has-shape .text-toggle, .viewer.holding.has-shape .hold-hint { color: #fff; }
+.viewer.holding.has-shape .stage, .phone-card.shape-preview .stage {
+  position: relative; display: block; width: min(92vw, 78dvh); aspect-ratio: 1; container-type: inline-size;
+}
+.viewer.holding.has-shape .stage .shape, .phone-card.shape-preview .stage .shape {
+  display: block; position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--card); stroke: none; overflow: visible;
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+/* Only the star uses a stroke, to round its points. */
+.stage .shape polygon, .shape-option polygon { stroke: var(--card, var(--accent));
+}
+.viewer.holding.has-shape .card-content, .phone-card.shape-preview .card-content {
+  position: absolute; left: 50%; top: calc(50% + var(--text-offset)); transform: translate(-50%, -50%);
+  width: var(--text-width); gap: calc(2cqw * var(--text-scale)); color: var(--card-text); text-align: center;
+}
+.viewer.holding.has-shape .card-content .instructions, .phone-card.shape-preview .instructions {
+  font-size: calc(9cqw * var(--text-scale)); max-width: none; line-height: 1.05;
+}
+.viewer.holding.has-shape .card-content .song, .phone-card.shape-preview .song { font-size: calc(7cqw * var(--text-scale)); }
+.viewer.holding.has-shape .card-content .eyebrow, .viewer.holding.has-shape .card-content .artist,
+.phone-card.shape-preview .eyebrow, .phone-card.shape-preview .artist { font-size: max(9px, calc(3.6cqw * var(--text-scale))); }
+.viewer.holding.has-shape .card-content .eyebrow, .viewer.holding.has-shape .card-content .artist { font-size: max(12px, calc(3.6cqw * var(--text-scale))); }
+.phone-card.shape-preview { background: #000; }
+.phone-card.shape-preview .stage { width: 100%; }
+
+/* Shape picker in the creator */
+.shape-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.shape-option { position: relative; }
+.shape-option input { position: absolute; opacity: 0; }
+.shape-option span {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 12px;
+  background: var(--panel-2); border: 2px solid var(--line); font-weight: 600; font-size: 0.85rem; cursor: pointer;
+}
+.shape-option svg, .shape-option .full-icon { width: 40px; height: 40px; fill: var(--accent); overflow: visible; }
+.shape-option .full-icon { border-radius: 6px; background: var(--accent); width: 28px; height: 40px; margin: 0 6px; }
+.shape-option input:checked + span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--panel-2)); }
+.shape-option input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
