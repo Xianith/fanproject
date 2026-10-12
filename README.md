@@ -1,5 +1,7 @@
 # Fan Project Cards
 
+**Live app: https://xianith.github.io/fanproject/**
+
 Make a fan project card ("hold this up during the bridge of X!"), and share it with a QR code. Fans scan it, and their phone becomes the card.
 
 ## Features
