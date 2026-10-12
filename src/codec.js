@@ -13,6 +13,7 @@ const KEY_MAP = {
   palette: 'p',
   allowCustom: 'cc',
   allowPalette: 'pp',
+  allowHideText: 'ht',
   creator: 'cr',
   socials: 'so',
 };
@@ -26,7 +27,8 @@ export function normalizeHex(value) {
   return `#${hex}`;
 }
 
-export function emptyProject() {
+// Base for decoding links: anything a link leaves out is blank.
+function blankProject() {
   return {
     title: '',
     song: '',
@@ -37,8 +39,19 @@ export function emptyProject() {
     palette: [],
     allowCustom: true,
     allowPalette: true,
+    allowHideText: true,
     creator: '',
     socials: {},
+  };
+}
+
+// Starting point for a brand new card in the creator.
+export function emptyProject() {
+  return {
+    ...blankProject(),
+    song: 'Pork Soda',
+    artist: 'Glass Animals',
+    instructions: 'Hold this up during:',
   };
 }
 
@@ -71,14 +84,14 @@ export function compact(project) {
 }
 
 export function expand(data) {
-  const project = emptyProject();
+  const project = blankProject();
   if (!data || typeof data !== 'object') throw new Error('Invalid project data');
   for (const [short, value] of Object.entries(data)) {
     const key = REVERSE_KEY_MAP[short];
     if (!key) continue;
     if (key === 'color') project.color = normalizeHex(String(value)) || project.color;
     else if (key === 'palette') project.palette = Array.isArray(value) ? value.map((h) => normalizeHex(String(h))).filter(Boolean) : [];
-    else if (key === 'allowCustom' || key === 'allowPalette') project[key] = Boolean(value);
+    else if (key === 'allowCustom' || key === 'allowPalette' || key === 'allowHideText') project[key] = Boolean(value);
     else if (key === 'socials') project.socials = value && typeof value === 'object' ? { ...value } : {};
     else project[key] = String(value);
   }

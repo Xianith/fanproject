@@ -1,7 +1,7 @@
 import { emptyProject, shareUrl, normalizeHex } from './codec.js';
 import { SOCIALS } from './socials.js';
 import { textColorFor, paletteFromImageUrl } from './color.js';
-import { searchAlbums } from './albums.js';
+import { searchMusic, artistAlbums } from './music.js';
 import { escapeHtml, toast, copyText } from './dom.js';
 import { openShareSheet, qrDataUrl } from './share.js';
 
@@ -40,9 +40,24 @@ export function renderCreator(app, initial) {
       <div class="creator-grid">
         <form class="panel" autocomplete="off" novalidate>
           <fieldset>
+            <legend>Find the song <span class="opt">optional</span></legend>
+            <p class="muted small">Picking a song or album fills in the details and pulls a color palette from its cover.</p>
+            <div class="search-tabs" role="tablist" aria-label="Search for">
+              <button type="button" role="tab" data-type="song" aria-selected="true">Songs</button>
+              <button type="button" role="tab" data-type="album" aria-selected="false">Albums</button>
+              <button type="button" role="tab" data-type="artist" aria-selected="false">Artists</button>
+            </div>
+            <div class="search-row">
+              <input name="musicSearch" type="search" placeholder="Search songs" enterkeyhint="search" />
+              <button type="button" class="btn" data-act="search">Search</button>
+            </div>
+            <div class="music-results" hidden></div>
+          </fieldset>
+
+          <fieldset>
             <legend>The moment</legend>
             <label>Instructions
-              <textarea name="instructions" rows="2" maxlength="140" placeholder="Hold this up during the bridge of “Song Name”!"></textarea>
+              <textarea name="instructions" rows="2" maxlength="140" placeholder="Hold this up during:"></textarea>
             </label>
             <div class="two-col">
               <label>Song <input name="song" maxlength="80" placeholder="Song title" /></label>
@@ -64,12 +79,7 @@ export function renderCreator(app, initial) {
 
           <fieldset>
             <legend>Album palette <span class="opt">optional</span></legend>
-            <p class="muted small">Find the album to pull colors from its cover, or upload the artwork yourself.</p>
-            <div class="search-row">
-              <input name="albumSearch" placeholder="Search album or artist" />
-              <button type="button" class="btn" data-act="search">Search</button>
-            </div>
-            <div class="album-results" hidden></div>
+            <p class="muted small">Colors come from the cover of the song or album you pick above. You can also upload the artwork yourself.</p>
             <label class="btn ghost upload">
               Upload cover art
               <input type="file" accept="image/*" name="cover" hidden />
@@ -82,6 +92,7 @@ export function renderCreator(app, initial) {
             <legend>What fans can change</legend>
             <label class="check"><input type="checkbox" name="allowPalette" /> Let fans pick from the album palette</label>
             <label class="check"><input type="checkbox" name="allowCustom" /> Let fans pick any color</label>
+            <label class="check"><input type="checkbox" name="allowHideText" /> Let fans hide the text in Hold up mode (screen becomes pure color)</label>
           </fieldset>
 
           <fieldset>
@@ -127,18 +138,19 @@ export function renderCreator(app, initial) {
   field('colorHex').value = project.color;
   field('allowPalette').checked = project.allowPalette;
   field('allowCustom').checked = project.allowCustom;
+  field('allowHideText').checked = project.allowHideText;
   form.querySelectorAll('[data-social]').forEach((el) => (el.value = project.socials[el.dataset.social] || ''));
 
   function renderPreview() {
     const card = $('.phone-card');
     card.style.setProperty('--card', project.color);
     card.style.setProperty('--card-text', textColorFor(project.color));
-    const subtitle = [project.song && `“${project.song}”`, project.artist].filter(Boolean).join(' · ');
     const swatches = project.allowPalette ? project.palette : [];
     card.innerHTML = `
       ${project.title ? `<p class="eyebrow">${escapeHtml(project.title)}</p>` : ''}
       <p class="instructions">${escapeHtml(project.instructions || 'Hold this up!')}</p>
-      ${subtitle ? `<p class="song">${escapeHtml(subtitle)}</p>` : ''}
+      ${project.song ? `<p class="song">${escapeHtml(project.song)}</p>` : ''}
+      ${project.artist ? `<p class="artist">${escapeHtml(project.artist)}</p>` : ''}
       <div class="mini-swatches">
         ${[project.color, ...swatches].map((c) => `<span style="--c:${c}"></span>`).join('')}
         ${project.allowCustom ? '<span class="custom">+</span>' : ''}
@@ -228,46 +240,77 @@ export function renderCreator(app, initial) {
     }
   }
 
+  let searchType = 'song';
+  const SEARCH_PLACEHOLDERS = { song: 'Search songs', album: 'Search albums', artist: 'Search artists' };
+
+  function showResults(results, emptyMessage, heading = '') {
+    const box = $('.music-results');
+    box.hidden = false;
+    if (!results.length) {
+      box.innerHTML = `<p class="muted small">${emptyMessage}</p>`;
+      return;
+    }
+    box.innerHTML = `${heading}<div class="result-list">${results
+      .map(
+        (r, i) => `<button type="button" class="result ${r.kind}" data-i="${i}">
+          ${r.thumb ? `<img src="${escapeHtml(r.thumb)}" alt="" loading="lazy" />` : '<span class="artist-icon" aria-hidden="true">♪</span>'}
+          <span class="result-text"><strong>${escapeHtml(r.title)}</strong><span class="muted">${escapeHtml(r.subtitle)}</span></span>
+        </button>`,
+      )
+      .join('')}</div>`;
+    box.querySelectorAll('.result').forEach((el) =>
+      el.addEventListener('click', () => pickResult(results[Number(el.dataset.i)])),
+    );
+  }
+
+  function setField(name, value) {
+    project[name] = value;
+    field(name).value = value;
+  }
+
+  async function pickResult(r) {
+    if (r.kind === 'artist') {
+      $('.music-results').innerHTML = '<p class="muted small">Loading albums…</p>';
+      try {
+        const albums = await artistAlbums(r.artistId);
+        showResults(albums, `No albums found for ${escapeHtml(r.artist)}.`, `<p class="muted small">Albums by <strong>${escapeHtml(r.artist)}</strong></p>`);
+      } catch {
+        showResults([], 'Search is unavailable right now. Upload the cover art instead.');
+      }
+      return;
+    }
+    if (r.kind === 'song') setField('song', r.song);
+    setField('artist', r.artist);
+    setField('album', r.album);
+    $('.music-results').hidden = true;
+    saveDraft(project);
+    renderPreview();
+    await usePalette(r.art);
+  }
+
   async function runSearch() {
-    const term = field('albumSearch').value.trim();
+    const term = field('musicSearch').value.trim();
     if (!term) return;
-    const box = $('.album-results');
+    const box = $('.music-results');
     box.hidden = false;
     box.innerHTML = '<p class="muted small">Searching…</p>';
     try {
-      const results = await searchAlbums(term);
-      if (!results.length) {
-        box.innerHTML = '<p class="muted small">No albums found.</p>';
-        return;
-      }
-      box.innerHTML = results
-        .map(
-          (r, i) => `<button type="button" class="album" data-i="${i}">
-            <img src="${escapeHtml(r.thumb)}" alt="" loading="lazy" />
-            <span><strong>${escapeHtml(r.album)}</strong><br /><span class="muted">${escapeHtml(r.artist)}</span></span>
-          </button>`,
-        )
-        .join('');
-      box.querySelectorAll('.album').forEach((el) =>
-        el.addEventListener('click', async () => {
-          const r = results[Number(el.dataset.i)];
-          project.album = r.album;
-          field('album').value = r.album;
-          if (!project.artist) {
-            project.artist = r.artist;
-            field('artist').value = r.artist;
-          }
-          box.hidden = true;
-          await usePalette(r.art);
-        }),
-      );
+      showResults(await searchMusic(term, searchType), `No ${searchType}s found. Try different words.`);
     } catch {
-      box.innerHTML = '<p class="muted small">Search is unavailable right now. Upload the cover art instead.</p>';
+      showResults([], 'Search is unavailable right now. Upload the cover art instead.');
     }
   }
 
+  app.querySelectorAll('.search-tabs [data-type]').forEach((tab) =>
+    tab.addEventListener('click', () => {
+      searchType = tab.dataset.type;
+      app.querySelectorAll('.search-tabs [data-type]').forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+      field('musicSearch').placeholder = SEARCH_PLACEHOLDERS[searchType];
+      if (field('musicSearch').value.trim()) runSearch();
+    }),
+  );
   $('[data-act="search"]').addEventListener('click', runSearch);
-  field('albumSearch').addEventListener('keydown', (e) => {
+  field('musicSearch').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       runSearch();

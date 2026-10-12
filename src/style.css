@@ -52,7 +52,7 @@ fieldset {
 }
 legend { font-weight: 700; padding: 0 6px; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; font-weight: 600; }
-input:not([type]), input[type='text'], textarea {
+input:not([type]), input[type='text'], input[type='search'], textarea {
   font: inherit; font-weight: 400; color: var(--text); background: var(--panel-2);
   border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-height: 44px;
 }
@@ -70,12 +70,24 @@ label.check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .search-row { display: flex; gap: 8px; }
 .search-row input { flex: 1; }
 .upload { align-self: flex-start; }
-.album-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 320px; overflow: auto; }
-.album {
-  display: flex; gap: 10px; align-items: center; text-align: left; padding: 8px;
+.search-tabs { display: flex; gap: 4px; padding: 4px; background: var(--panel-2); border-radius: 999px; align-self: flex-start; }
+.search-tabs button {
+  border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; font-size: 0.9rem;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px;
+}
+.search-tabs button[aria-selected='true'] { background: var(--accent); color: var(--accent-text); }
+.music-results { display: flex; flex-direction: column; gap: 8px; }
+.result-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 2px; }
+.result {
+  display: flex; gap: 10px; align-items: center; text-align: left; padding: 8px; min-width: 0;
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font: inherit; font-size: 0.85rem; cursor: pointer;
 }
-.album img { width: 48px; height: 48px; border-radius: 6px; flex-shrink: 0; }
+.result:hover { border-color: var(--muted); }
+.result img, .artist-icon { width: 48px; height: 48px; border-radius: 6px; flex-shrink: 0; }
+.result.artist img, .artist-icon { border-radius: 50%; }
+.artist-icon { display: grid; place-items: center; background: var(--line); font-size: 1.3rem; }
+.result-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.result-text > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
 .swatch {
@@ -106,7 +118,8 @@ label.check input { width: 20px; height: 20px; accent-color: var(--accent); }
 }
 .phone-card .eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.8; }
 .phone-card .instructions { font-size: 1.15rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
-.phone-card .song { font-size: 0.8rem; opacity: 0.85; }
+.phone-card .song { font-size: 1.05rem; font-weight: 800; overflow-wrap: anywhere; }
+.phone-card .artist { font-size: 0.75rem; opacity: 0.8; }
 .mini-swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 10px; }
 .mini-swatches span { width: 14px; height: 14px; border-radius: 50%; background: var(--c); border: 1px solid rgba(127, 127, 127, 0.5); font-size: 10px; line-height: 12px; }
 .mini-swatches .custom { border-style: dashed; }
@@ -135,8 +148,8 @@ body.viewer-mode { background: #000; }
 }
 .card-face .eyebrow { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.8rem; font-weight: 700; opacity: 0.8; }
 .card-face .instructions { font-size: clamp(2rem, 9vw, 4.5rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; max-width: 18ch; overflow-wrap: anywhere; }
-.card-face .song { font-size: 1.1rem; font-weight: 600; opacity: 0.9; }
-.card-face .album-name { font-size: 0.9rem; opacity: 0.75; }
+.card-face .song { font-size: clamp(1.6rem, 7vw, 3rem); font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
+.card-face .artist { font-size: 1rem; font-weight: 600; opacity: 0.8; }
 .hold-hint { display: none; font-size: 0.8rem; opacity: 0.6; position: absolute; bottom: max(16px, env(safe-area-inset-bottom)); left: 0; right: 0; }
 
 .controls {
@@ -160,7 +173,18 @@ body.viewer-mode { background: #000; }
 /* "Hold up" mode: the card fills the whole screen, nothing else shows. */
 .viewer.holding .controls { display: none; }
 .viewer.holding .card-face { min-height: 100dvh; cursor: pointer; position: relative; }
-.viewer.holding .hold-hint { display: block; }
+.viewer.holding .hold-hint { display: block; animation: fade-out 0.6s ease 4s forwards; }
+@keyframes fade-out { to { opacity: 0; } }
+
+/* Fans can hide the text so the whole screen is pure color. */
+.text-toggle {
+  display: none; position: fixed; z-index: 5; top: max(14px, env(safe-area-inset-top)); right: 14px;
+  padding: 8px 14px; min-height: 40px; border-radius: 999px; border: 1px solid currentColor;
+  background: transparent; color: var(--card-text); font: inherit; font-size: 0.85rem; font-weight: 600;
+  opacity: 0.55; cursor: pointer;
+}
+.viewer.holding .text-toggle { display: block; }
+.viewer.text-hidden .card-face > * { visibility: hidden; }
 
 /* Share sheet */
 .sheet-overlay {

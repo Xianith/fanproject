@@ -39,8 +39,19 @@ describe('codec', () => {
   });
 
   it('drops empty fields to keep links short', () => {
-    const c = compact({ ...emptyProject(), instructions: 'Hi' });
-    expect(Object.keys(c).sort()).toEqual(['c', 'cc', 'i', 'pp', 'v']);
+    const c = compact({ ...emptyProject(), song: '', artist: '', instructions: 'Hi' });
+    expect(Object.keys(c).sort()).toEqual(['c', 'cc', 'ht', 'i', 'pp', 'v']);
+  });
+
+  it('starts new cards with the default song', () => {
+    expect(emptyProject()).toMatchObject({ instructions: 'Hold this up during:', song: 'Pork Soda', artist: 'Glass Animals' });
+  });
+
+  it('does not fill creator defaults into links that leave fields out', async () => {
+    const p = await decodeProject(btoa(JSON.stringify({ v: 1, i: 'Hi' })));
+    expect(p.song).toBe('');
+    expect(p.artist).toBe('');
+    expect(p.allowHideText).toBe(true);
   });
 
   it('rejects garbage', async () => {

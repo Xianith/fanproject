@@ -32,7 +32,6 @@ export function renderViewer(app, project, encoded) {
   let current = saved || project.color;
   let wakeLock = null;
 
-  const subtitle = [project.song && `“${project.song}”`, project.artist].filter(Boolean).join(' · ');
   const socials = SOCIALS.filter((s) => project.socials[s.id]);
 
   document.body.classList.add('viewer-mode');
@@ -41,10 +40,11 @@ export function renderViewer(app, project, encoded) {
       <section class="card-face" aria-live="polite">
         ${project.title ? `<p class="eyebrow">${escapeHtml(project.title)}</p>` : ''}
         <h1 class="instructions">${escapeHtml(project.instructions || 'Hold this up!')}</h1>
-        ${subtitle ? `<p class="song">${escapeHtml(subtitle)}</p>` : ''}
-        ${project.album ? `<p class="album-name">from ${escapeHtml(project.album)}</p>` : ''}
+        ${project.song ? `<p class="song">${escapeHtml(project.song)}</p>` : ''}
+        ${project.artist || project.album ? `<p class="artist">${escapeHtml([project.artist, project.album].filter(Boolean).join(' · '))}</p>` : ''}
         <p class="hold-hint">Tap anywhere to exit · turn your brightness all the way up</p>
       </section>
+      ${project.allowHideText ? '<button class="text-toggle" data-act="toggle-text" aria-pressed="false">Hide text</button>' : ''}
 
       <section class="controls">
         <div class="control-row">
@@ -149,10 +149,20 @@ export function renderViewer(app, project, encoded) {
 
   function exitHold() {
     viewer.classList.remove('holding');
+    setTextHidden(false);
     if (document.fullscreenElement) document.exitFullscreen?.();
     wakeLock?.release?.();
     wakeLock = null;
   }
+
+  const textToggle = app.querySelector('[data-act="toggle-text"]');
+  function setTextHidden(hidden) {
+    viewer.classList.toggle('text-hidden', hidden);
+    if (!textToggle) return;
+    textToggle.textContent = hidden ? 'Show text' : 'Hide text';
+    textToggle.setAttribute('aria-pressed', String(hidden));
+  }
+  textToggle?.addEventListener('click', () => setTextHidden(!viewer.classList.contains('text-hidden')));
 
   app.querySelector('[data-act="hold"]').addEventListener('click', enterHold);
   app.querySelector('.card-face').addEventListener('click', () => {
