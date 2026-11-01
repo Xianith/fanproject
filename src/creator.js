@@ -4,7 +4,7 @@ import { textColorFor, paletteFromImageUrl } from './color.js';
 import { searchMusic, artistAlbums } from './music.js';
 import { escapeHtml, toast, copyText } from './dom.js';
 import { openShareSheet, qrDataUrl } from './share.js';
-import { SHAPES, getShape, shapeSvg, shapeVars } from './shapes.js';
+import { SHAPES, getShape, isShapeId, shapeSvg, shapeVars } from './shapes.js';
 
 const DRAFT_KEY = 'fanproject:draft';
 const MAX_PALETTE = 8;
@@ -12,7 +12,11 @@ const MAX_PALETTE = 8;
 function loadDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? { ...emptyProject(), ...JSON.parse(raw) } : null;
+    if (!raw) return null;
+    const draft = { ...emptyProject(), ...JSON.parse(raw) };
+    // Drafts can outlive options that were later removed (e.g. old shapes).
+    if (!isShapeId(draft.shape)) draft.shape = 'none';
+    return draft;
   } catch {
     return null;
   }
