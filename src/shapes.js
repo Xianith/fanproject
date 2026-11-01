@@ -3,8 +3,6 @@
 // shape's width the text may use so it stays inside the shape.
 export const SHAPES = [
   { id: 'none', label: 'Full screen' },
-  { id: 'circle', label: 'Circle', svg: '<circle cx="50" cy="50" r="50" />', textWidth: 70, textScale: 1 },
-  { id: 'square', label: 'Square', svg: '<rect width="100" height="100" rx="6" />', textWidth: 84, textScale: 1 },
   {
     id: 'star',
     label: 'Star',
@@ -12,6 +10,14 @@ export const SHAPES = [
     textWidth: 46,
     textScale: 0.7,
     textOffset: 6,
+  },
+  {
+    id: 'heart',
+    label: 'Heart',
+    svg: '<path d="M50 94 C 22 74, 2 56, 2 32 C 2 15, 14 4, 28 4 C 38 4, 46 10, 50 19 C 54 10, 62 4, 72 4 C 86 4, 98 15, 98 32 C 98 56, 78 74, 50 94 Z" />',
+    textWidth: 60,
+    textScale: 0.82,
+    textOffset: -6,
   },
 ];
 

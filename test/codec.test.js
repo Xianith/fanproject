@@ -69,6 +69,8 @@ describe('codec', () => {
 
   it('round-trips the hold up shape and drops unknown shapes', async () => {
     expect((await decodeProject(await encodeProject({ ...sample, shape: 'star' }))).shape).toBe('star');
+    expect((await decodeProject(await encodeProject({ ...sample, shape: 'heart' }))).shape).toBe('heart');
+    expect((await decodeProject(btoa(JSON.stringify({ v: 1, sh: 'circle' })))).shape).toBe('none');
     expect(compact({ ...sample, shape: 'none' }).sh).toBeUndefined();
     expect((await decodeProject(btoa(JSON.stringify({ v: 1, sh: 'blob' })))).shape).toBe('none');
   });
